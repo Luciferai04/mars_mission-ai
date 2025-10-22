@@ -86,7 +86,49 @@ Selected diagrams:
   
   ![Microservices Communication Pattern](docs/diagrams/diagram-8.png)
 
-For the complete set (including DQN, fleet coordination, streaming, voice, federated, 3D viewer, strategic planning, JPL export, and mobile architecture), see the PDF and guide above.
+Additional diagrams:
+
+- DQN‑Enabled MARL (Double DQN)
+  
+  ![DQN‑Enabled MARL](docs/diagrams/diagram-09.png)
+
+- Multi‑Rover Coordination
+  
+  ![Multi‑Rover Coordination](docs/diagrams/diagram-10.png)
+
+- Predictive Maintenance Flow
+  
+  ![Predictive Maintenance Flow](docs/diagrams/diagram-11.png)
+
+- Streaming Telemetry (WebSocket)
+  
+  ![Streaming Telemetry](docs/diagrams/diagram-12.png)
+
+- Voice Command Flow
+  
+  ![Voice Command Flow](docs/diagrams/diagram-13.png)
+
+- Federated Learning (FedAvg)
+  
+  ![Federated Learning](docs/diagrams/diagram-14.png)
+
+- 3D Terrain Visualization
+  
+  ![3D Terrain Visualization](docs/diagrams/diagram-15.png)
+
+- Long‑Term Strategic Planning
+  
+  ![Long‑Term Strategic Planning](docs/diagrams/diagram-16.png)
+
+- JPL Export (APGEN/PLEXIL)
+  
+  ![JPL Export](docs/diagrams/diagram-17.png)
+
+- Mobile App Architecture (Expo)
+  
+  ![Mobile App Architecture](docs/diagrams/diagram-18.png)
+
+For the complete set and compilation instructions, see the PDF and guide above.
 
 ---
 
