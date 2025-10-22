@@ -407,4 +407,193 @@
 
 \end{tikzpicture}
 
+% ===================================================================
+% DIAGRAM 9: DQN-Enabled MARL (Double DQN)
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+
+\node[font=\Large\bfseries] at (0,9) {DQN-Enabled MARL (Double DQN)};
+
+% Tabular vs DQN
+\node (tab) [rectangle, rounded corners, draw=black, fill=blue!15, minimum width=4cm, minimum height=1cm] at (-6,6.5) {Tabular Agents};
+\node (dqn) [rectangle, rounded corners, draw=black, fill=purple!15, minimum width=4cm, minimum height=1cm] at (2,6.5) {DQN Agents};
+
+% DQN internals
+\node (policy) [rectangle, draw=black, fill=purple!30, minimum width=3cm, minimum height=1cm] at (2,4.5) {Policy Net};
+\node (target) [rectangle, draw=black, fill=purple!20, minimum width=3cm, minimum height=1cm] at (6,4.5) {Target Net};
+\node (replay) [rectangle, draw=black, fill=yellow!30, minimum width=3cm, minimum height=1cm] at (2,2.8) {Replay Buffer};
+
+\draw[arrow] (policy) -- node[above]{copy $\rightarrow$} (target);
+\draw[arrow] (replay) -- (policy);
+
+% Coordination
+\node (vote) [rectangle, rounded corners, draw=black, fill=red!30, minimum width=3cm, minimum height=1cm] at (-2,3.5) {Weighted Voting};
+\draw[arrow] (tab) -- (vote);
+\draw[arrow] (policy) -- (vote);
+
+\node at (-6,2) {\small MARL\ Agents (Q-Table)};
+\node at (2,1.5) {\small Double DQN w/ target update};
+
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 10: Multi-Rover Coordination
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {Multi-Rover Coordination};
+
+\node (coord) [rectangle, rounded corners, draw=black, fill=red!20, minimum width=3.5cm, minimum height=1cm] at (0,6.5) {Fleet Coordinator};
+\node (marl) [service, fill=marl!30] at (0,4.8) {MARL System};
+
+\node (r1) [client] at (-6,6.5) {Rover A};
+\node (r2) [client] at (-6,5.2) {Rover B};
+\node (r3) [client] at (-6,3.9) {Rover C};
+
+\draw[arrow] (r1) -- (coord);
+\draw[arrow] (r2) -- (coord);
+\draw[arrow] (r3) -- (coord);
+\draw[arrow] (coord) -- (marl);
+\draw[arrow] (marl) -- ++(0,-1.2) node[below]{\small Joint Actions};
+
+\node[align=left, text width=5cm] at (4,5.2) {\small Conflict resolution:\\- Avoid same target cell\\- Hazard-aware tweak\\- Priority ordering};
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 11: Predictive Maintenance Flow
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.4cm]
+\node[font=\Large\bfseries] at (0,9) {Predictive Maintenance Flow};
+
+\node (tele) [rectangle, rounded corners, draw=black, fill=blue!20, minimum width=3.2cm, minimum height=1cm] at (-6,6.5) {Telemetry};
+\node (feat) [rectangle, rounded corners, draw=black, fill=yellow!30, minimum width=3.2cm, minimum height=1cm] at (-2,6.5) {Feature Extractor};
+\node (model) [rectangle, rounded corners, draw=black, fill=green!30, minimum width=3.2cm, minimum height=1cm] at (2,6.5) {Maintenance Model};
+\node (risk) [rectangle, rounded corners, draw=black, fill=red!30, minimum width=3.2cm, minimum height=1cm] at (6,6.5) {Risk Score};
+
+\draw[arrow] (tele) -- (feat);
+\draw[arrow] (feat) -- (model);
+\draw[arrow] (model) -- (risk);
+
+\node at (2,4.8) {\small Endpoints: /maintenance/train, /maintenance/predict};
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 12: Streaming Telemetry (WebSocket)
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {Streaming Telemetry (WebSocket)};
+
+\node (pub) [service, fill=data!30] at (-5,6.5) {Data Integration};
+\node (ws) [rectangle, rounded corners, draw=black, fill=blue!15, minimum width=4cm, minimum height=1cm] at (0,6.5) {WS /ws/telemetry};
+\node (mob) [client] at (5,6.5) {Mobile App};
+
+\draw[arrow] (pub) -- node[above]{POST /publish/telemetry} (ws);
+\draw[arrow] (ws) -- node[above]{broadcast} (mob);
+
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 13: Voice Command Flow
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {Voice Command Flow};
+
+\node (user) [client] at (-6,6.5) {User};
+\node (voice) [service, fill=blue!20] at (-2,6.5) {Voice Service};
+\node (plan) [service, fill=planning!30] at (2,6.5) {Planning};
+
+\draw[arrow] (user) -- node[above]{\small text/audio} (voice);
+\draw[arrow] (voice) -- node[above]{\small POST /plan} (plan);
+
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 14: Federated Learning (FedAvg)
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {Federated Learning (FedAvg)};
+
+\node (agg) [rectangle, rounded corners, draw=black, fill=green!20, minimum width=3.5cm, minimum height=1cm] at (0,6.5) {Aggregator};
+\node (c1) [client] at (-6,7.5) {Rover 1};
+\node (c2) [client] at (-6,5.5) {Rover 2};
+\node (c3) [client] at (-6,3.5) {Rover 3};
+
+\draw[arrow] (c1) -- node[above]{weights} (agg);
+\draw[arrow] (c2) -- (agg);
+\draw[arrow] (c3) -- (agg);
+\draw[arrow] (agg) -- ++(3,0) node[right]{global model};
+
+\node at (0,4.5) {\small Endpoints: /federated/update, /federated/aggregate};
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 15: 3D Terrain Visualization
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {3D Terrain Visualization};
+
+\node (dem) [rectangle, rounded corners, draw=black, fill=gray!20, minimum width=3.5cm, minimum height=1cm] at (-6,6.5) {DEM (npy/tif)};
+\node (svc) [service, fill=blue!20] at (-2,6.5) {Visualization3D Service};
+\node (hm) [rectangle, rounded corners, draw=black, fill=yellow!30, minimum width=3.5cm, minimum height=1cm] at (2,6.5) {/heightmap JSON};
+\node (web) [client] at (6,6.5) {Three.js Viewer};
+
+\draw[arrow] (dem) -- (svc);
+\draw[arrow] (svc) -- (hm);
+\draw[arrow] (hm) -- (web);
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 16: Long-Term Strategic Planning
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {Long-Term Strategic Planning};
+
+\node (ctx) [rectangle, rounded corners, draw=black, fill=gray!20, minimum width=3.5cm, minimum height=1cm] at (-6,6.5) {Mission Context};
+\node (sp) [service, fill=planning!30] at (-1.5,6.5) {Strategic Planner};
+\node (obj) [rectangle, rounded corners, draw=black, fill=green!20, minimum width=4.5cm, minimum height=1cm] at (4,6.5) {Weekly Objectives (90d)};
+
+\draw[arrow] (ctx) -- (sp);
+\draw[arrow] (sp) -- (obj);
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 17: JPL Export (APGEN/PLEXIL)
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {JPL Export (APGEN/PLEXIL)};
+
+\node (plan) [rectangle, rounded corners, draw=black, fill=blue!20, minimum width=3.5cm, minimum height=1cm] at (-6,6.5) {Mission Plan JSON};
+\node (export) [service, fill=planning!30] at (-1.5,6.5) {Export Endpoint};
+\node (apgen) [rectangle, rounded corners, draw=black, fill=yellow!30, minimum width=3.5cm, minimum height=1cm] at (4,7.2) {APGEN Output};
+\node (plexil) [rectangle, rounded corners, draw=black, fill=yellow!20, minimum width=3.5cm, minimum height=1cm] at (4,5.8) {PLEXIL Output};
+
+\draw[arrow] (plan) -- (export);
+\draw[arrow] (export) -- (apgen);
+\draw[arrow] (export) -- (plexil);
+\end{tikzpicture}
+
+% ===================================================================
+% DIAGRAM 18: Mobile App Architecture
+% ===================================================================
+\newpage
+\begin{tikzpicture}[node distance=1.2cm]
+\node[font=\Large\bfseries] at (0,9) {Mobile App Architecture (Expo)};
+
+\node (app) [client] at (-6,6.5) {Expo App};
+\node (ws) [rectangle, rounded corners, draw=black, fill=blue!15, minimum width=4cm, minimum height=1cm] at (-1.5,6.5) {WS http://...:8004/ws/telemetry};
+\node (api) [service, fill=planning!30] at (4,6.5) {REST APIs};
+
+\draw[arrow] (app) -- (ws);
+\draw[arrow] (app) -- (api);
+
+\end{tikzpicture}
+
 \end{document}

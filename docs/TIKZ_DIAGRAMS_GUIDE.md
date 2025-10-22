@@ -8,7 +8,7 @@ All architecture diagrams are available in TikZ/LaTeX format in `docs/tikz_diagr
 
 ## Available Diagrams
 
-The file contains 8 comprehensive diagrams:
+The file contains 18 comprehensive diagrams:
 
 1. **High-Level System Architecture**
    - Shows all microservices, gateway, data layer, and ML models
@@ -49,6 +49,36 @@ The file contains 8 comprehensive diagrams:
    - Service-to-service communication
    - Service discovery
    - Message queue integration
+
+9. **DQN-Enabled MARL (Double DQN)**
+   - Policy/Target networks, replay buffer, weighted voting
+
+10. **Multi-Rover Coordination**
+    - Fleet coordinator with conflict resolution
+
+11. **Predictive Maintenance Flow**
+    - Telemetry → features → model → risk score
+
+12. **Streaming Telemetry (WebSocket)**
+    - Publisher, WS hub, subscribers (mobile/web)
+
+13. **Voice Command Flow**
+    - Voice service to planning
+
+14. **Federated Learning (FedAvg)**
+    - Clients send weights, aggregator returns global model
+
+15. **3D Terrain Visualization**
+    - DEM → /heightmap → Three.js viewer
+
+16. **Long-Term Strategic Planning**
+    - Mission context → weekly objectives over horizon
+
+17. **JPL Export (APGEN/PLEXIL)**
+    - Plan JSON → exporters
+
+18. **Mobile App Architecture (Expo)**
+    - Expo app consuming WS and REST APIs
 
 ## Prerequisites
 
@@ -355,7 +385,7 @@ jobs:
 ```bash
 # Single command to generate all formats
 pdflatex tikz_diagrams.tex && \
-for i in {1..8}; do \
+for i in {1..18}; do \
     pdftoppm tikz_diagrams.pdf diagram_$i -png -r 300 -f $i -l $i; \
     pdf2svg tikz_diagrams.pdf diagram_$i.svg $i; \
 done
@@ -363,8 +393,8 @@ done
 
 This generates:
 - `tikz_diagrams.pdf` (all diagrams)
-- `diagram_1-1.png` through `diagram_8-1.png` (PNG images)
-- `diagram_1.svg` through `diagram_8.svg` (SVG vectors)
+- `diagram_1-1.png` through `diagram_18-1.png` (PNG images)
+- `diagram_1.svg` through `diagram_18.svg` (SVG vectors)
 
 ---
 
