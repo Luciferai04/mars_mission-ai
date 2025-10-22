@@ -4,7 +4,7 @@ Data Integration Microservice
 Aggregates data from multiple Mars mission data sources
 """
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, List, Optional, Any
@@ -12,6 +12,19 @@ import httpx
 import logging
 from datetime import datetime
 import asyncio
+import numpy as np
+from typing import Any
+import sys
+from pathlib import Path
+
+# Ensure project src is on path for local imports
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
+# Optional predictive maintenance
+try:
+    from src.core.predictive_maintenance import MaintenancePredictor
+except Exception:
+    MaintenancePredictor = None  # type: ignore
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -33,6 +46,33 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+# Simple WebSocket connection manager
+class ConnectionManager:
+    def __init__(self):
+        self.active: list[WebSocket] = []
+        self.last_telemetry: dict[str, Any] = {}
+
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active.append(websocket)
+        # On connect, push last telemetry if available
+        if self.last_telemetry:
+            await websocket.send_json({"type": "telemetry", "data": self.last_telemetry})
+
+    def disconnect(self, websocket: WebSocket):
+        if websocket in self.active:
+            self.active.remove(websocket)
+
+    async def broadcast(self, message: dict):
+        for ws in list(self.active):
+            try:
+                await ws.send_json(message)
+            except Exception:
+                self.disconnect(ws)
+
+
+manager = ConnectionManager()
 
 # Pydantic models
 class MarsEnvironment(BaseModel):
@@ -192,6 +232,28 @@ async def get_rover_status():
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.websocket("/ws/telemetry")
+async def websocket_telemetry(websocket: WebSocket):
+    try:
+        await manager.connect(websocket)
+        while True:
+            # Keep connection alive; server pushes updates via publish endpoint
+            await asyncio.sleep(60)
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+
+
+@app.post("/publish/telemetry")
+async def publish_telemetry(payload: Dict[str, Any]):
+    """Publish telemetry update to all subscribers"""
+    try:
+        manager.last_telemetry = payload
+        await manager.broadcast({"type": "telemetry", "data": payload})
+        return {"status": "ok"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/integrated", response_model=IntegratedData)
 async def get_integrated_data(
     sol: int = Query(...),
@@ -221,6 +283,36 @@ async def get_integrated_data(
         
     except Exception as e:
         logger.error(f"Error fetching integrated data: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# Predictive Maintenance Endpoints
+PREDICTOR = MaintenancePredictor() if 'MaintenancePredictor' in globals() and MaintenancePredictor is not None else None
+
+@app.post("/maintenance/predict")
+async def maintenance_predict(telemetry: Dict[str, Any]):
+    if PREDICTOR is None:
+        raise HTTPException(status_code=503, detail="Predictive model not available (sklearn missing)")
+    try:
+        risk = PREDICTOR.predict_proba(telemetry)
+        return {"risk_of_failure": risk}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/maintenance/train")
+async def maintenance_train():
+    """Train a simple model from synthetic data (demo)."""
+    if PREDICTOR is None:
+        raise HTTPException(status_code=503, detail="Predictive model not available (sklearn missing)")
+    try:
+        # Generate synthetic balanced dataset
+        n = 500
+        X = np.random.randn(n, 7)
+        y = (X[:, 0] - X[:, 2] + 0.5 * X[:, 3] > 0).astype(int)
+        PREDICTOR.fit(X, y)
+        return {"status": "trained", "samples": int(n)}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
 

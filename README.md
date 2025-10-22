@@ -32,6 +32,25 @@ Mars Mission AI is an advanced autonomous mission planning system that combines 
 
 ---
 
+## What's New (v2.0 → v3.0)
+
+- DQN backend for MARL (enable with `MARL_ALGO=dqn`); improved action quality using Double DQN and a hazard-aware heuristic fallback when Q-values are flat.
+- Multi-rover coordination: `POST /coordinate_fleet` for joint actions across rovers.
+- Predictive maintenance: `POST /maintenance/train`, `POST /maintenance/predict`.
+- Enhanced vision: optical-flow object tracking `POST /track_objects` (OpenCV); hazard classifier endpoint `POST /classify_hazard`.
+- Real-time streaming: WebSocket `GET /ws/telemetry`, publisher `POST /publish/telemetry`.
+- Mobile app (Expo) for mission monitoring; connects to the telemetry WebSocket.
+- 3D terrain visualization service at http://localhost:8006 with `/heightmap` and Three.js viewer.
+- Voice command interface: `POST /command/execute` routes to the planner.
+- Federated learning (FedAvg): `POST /federated/update`, `GET /federated/aggregate`.
+- Autonomous experiment design: `POST /experiments/propose`.
+- Long-term strategic planning: `POST /plan/long-term`.
+- JPL planning tools export: `POST /export/jpl?fmt=plexil|apgen`.
+- High-quality LaTeX/TikZ diagrams added: see `docs/tikz_diagrams.tex`, `docs/tikz_diagrams.pdf`, and `docs/TIKZ_DIAGRAMS_GUIDE.md`.
+- CI updated with Docker Compose smoke tests; Git LFS is used for large model/data files.
+
+See `docs/ROADMAP_IMPLEMENTATION.md` for a concise mapping of features to code.
+
 ## Technical Innovations
 
 ### 1. Multi-Agent Reinforcement Learning (MARL)
@@ -125,6 +144,20 @@ Mars Mission AI is an advanced autonomous mission planning system that combines 
 - Resource-aware scheduling
 
 ---
+
+## High-Quality Diagrams (TikZ/LaTeX)
+
+All architecture and system diagrams are authored in LaTeX/TikZ for publication-grade quality.
+- Source: `docs/tikz_diagrams.tex`
+- Guide: `docs/TIKZ_DIAGRAMS_GUIDE.md`
+- Compiled PDF (8 pages): `docs/tikz_diagrams.pdf`
+
+Basic compilation (requires LaTeX):
+```bash
+pdflatex -interaction=nonstopmode -halt-on-error -output-directory=docs docs/tikz_diagrams.tex
+```
+
+To export SVG/PNG, see the guide for `dvisvgm`/`inkscape` workflows and CI tips.
 
 ## System Architecture
 
@@ -408,7 +441,14 @@ stateDiagram-v2
 
 ## Machine Learning Models
 
-### SegFormer Vision Model
+### Vision Hazard Classifier (ConvNeXt-Tiny)
+
+- Current service model: ConvNeXt-Tiny classifier (`models/terrain_vision_convnext.pth`).
+- Endpoints: `/classify_hazard`, `/classify_batch`.
+- Normalization: mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225].
+- Classes: SAFE, CAUTION, HAZARD.
+
+### SegFormer Vision Model (optional/experimental)
 
 **Architecture**: Transformer-based semantic segmentation
 - Hierarchical encoder with overlapping patch embeddings
@@ -509,15 +549,53 @@ R = w1 * science_reward
 git clone https://github.com/yourusername/mars_mission-ai.git
 cd mars_mission-ai
 
-# Build and start all services
-docker-compose up --build -d
+# If you use large files (models/data), ensure Git LFS is installed once per machine
+# brew install git-lfs && git lfs install
 
-# Configure API Gateway
+# Build and start all services (enable DQN agents)
+MARL_ALGO=dqn docker compose up -d --build
+
+# Configure API Gateway (optional demo setup)
 chmod +x scripts/configure_gateway.sh
 ./scripts/configure_gateway.sh
 
 # Verify services
-curl http://localhost:8005/services/status
+curl -s http://localhost:8005/services/status | jq .
+```
+
+#### Quick Run Checklist (copy-paste)
+
+```bash
+# 1) Launch services with DQN
+MARL_ALGO=dqn docker compose up -d --build
+
+# 2) Train for better policies, then hot-reload
+. .venv/bin/activate && python scripts/train_marl.py --episodes 2000
+curl -X POST http://localhost:8003/agents/reload
+
+# 3) Stream telemetry (tests WebSocket + mobile)
+curl -sX POST http://localhost:8004/publish/telemetry \
+  -H 'Content-Type: application/json' \
+  -d '{"battery_soc":72,"power_generation":150,"power_consumption":120,"temp_c":-60,"dust_opacity":0.4}'
+
+# 4) Create a plan
+curl -sX POST http://localhost:8005/plan \
+  -H 'Content-Type: application/json' \
+  -d '{"sol":1600,"lat":18.4447,"lon":77.4508,"battery_soc":0.65,"time_budget_min":480,"objectives":["traverse","image","sample"]}'
+
+# 5) Coordinate a fleet
+curl -sX POST http://localhost:8003/coordinate_fleet \
+  -H 'Content-Type: application/json' \
+  -d '{"rovers":[{"rover_id":"percy","lat":18.444,"lon":77.451,"battery_soc":0.6,"time_remaining":300},{"rover_id":"helicopter","lat":18.446,"lon":77.452,"battery_soc":0.8,"time_remaining":200}]}'
+
+# 6) Voice command
+curl -sX POST http://localhost:8007/command/execute \
+  -H 'Content-Type: application/json' \
+  -d '{"text":"plan mission","context":{"sol":1600,"lat":18.4447,"lon":77.4508}}'
+
+# 7) 3D viewer + mobile
+open http://localhost:8006
+(cd apps/mobile && npm i && EXPO_USE_WATCHMAN=1 npm start)
 ```
 
 ### Local Development Setup
@@ -772,6 +850,31 @@ print(f"Actions: {len(plan['optimized_actions'])}")
 ---
 
 ## API Documentation
+
+### Updated/Additional Endpoints (v2.x–v3.0)
+
+- Vision Service (http://localhost:8002)
+  - GET /health
+  - GET /model_info
+  - POST /classify_hazard (UploadFile)
+  - POST /classify_batch (UploadFiles)
+  - POST /track_objects (UploadFiles; OpenCV optical flow)
+  - POST /reload_model
+- MARL Service (http://localhost:8003)
+  - POST /optimize
+  - GET /agents/stats, GET /agents/confidence, POST /agents/reload
+  - POST /coordinate_fleet
+  - POST /federated/update, GET /federated/aggregate
+- Data Integration (http://localhost:8004)
+  - WS /ws/telemetry, POST /publish/telemetry
+  - POST /maintenance/train, POST /maintenance/predict
+  - GET /environment/{sol}, GET /terrain, GET /science-targets, GET /integrated
+- Planning (http://localhost:8005)
+  - POST /plan
+  - POST /experiments/propose, POST /plan/long-term, POST /export/jpl
+
+Notes:
+- Vision-enhanced `/plan/with-vision` is experimental; use vision endpoints directly to enrich targets before calling `/plan`.
 
 ### Planning Service API
 
@@ -1066,6 +1169,14 @@ bandit -r src/
 ```
 
 ---
+
+## CI/CD and Smoke Tests
+
+- GitHub Actions workflow at `.github/workflows/ci.yml` runs:
+  - Lint + unit tests on Python 3.10/3.11
+  - Docker image build and (optional) push
+  - Docker Compose smoke tests: builds stack, waits for health, calls `/plan` and `/coordinate_fleet`
+- Set required secrets (e.g., `DOCKER_USERNAME`, `DOCKER_PASSWORD`, API keys) in repository settings.
 
 ## Deployment
 

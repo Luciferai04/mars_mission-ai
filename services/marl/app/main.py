@@ -12,11 +12,17 @@ import sys
 from pathlib import Path
 import logging
 import os
+import numpy as np
 
 # Add parent directory to path to import MARL system
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
 
-from src.core.multi_agent_rl import MultiAgentRLSystem
+from src.core.multi_agent_rl import MultiAgentRLSystem, AgentState, Action
+from src.core.fleet_coordinator import MultiRoverCoordinator, RoverContext
+try:
+    from src.core.federated_learning import FedAvgAggregator
+except Exception:
+    FedAvgAggregator = None  # type: ignore
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -40,6 +46,8 @@ app.add_middleware(
 
 # Global MARL system
 marl_system = None
+coordinator: Optional[MultiRoverCoordinator] = None
+agg = FedAvgAggregator() if 'FedAvgAggregator' in globals() and FedAvgAggregator is not None else None
 
 
 # Pydantic models
@@ -62,6 +70,21 @@ class OptimizationResponse(BaseModel):
     total_time: int
     rl_confidence: float
     agent_stats: Dict[str, str]
+
+
+class RoverInput(BaseModel):
+    rover_id: str
+    lat: float
+    lon: float
+    battery_soc: float
+    time_remaining: int
+    current_sol: int = 0
+    temperature: float = -60.0
+    dust_opacity: float = 0.4
+
+
+class FleetRequest(BaseModel):
+    rovers: List[RoverInput]
 
 
 class AgentStats(BaseModel):
@@ -96,6 +119,8 @@ async def startup_event():
     """Load MARL system on startup"""
     logger.info("Starting MARL Optimization Service...")
     load_marl_system()
+    global coordinator
+    coordinator = MultiRoverCoordinator(marl_system)
 
 
 @app.get("/health")
@@ -205,6 +230,67 @@ async def reload_agents():
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Reload failed: {str(e)}")
+
+
+@app.post("/coordinate_fleet")
+async def coordinate_fleet(request: FleetRequest):
+    """Coordinate joint actions for multiple rovers"""
+    if marl_system is None or coordinator is None:
+        raise HTTPException(status_code=503, detail="MARL system not loaded")
+    try:
+        rover_contexts = []
+        for r in request.rovers:
+            state = AgentState(
+                position=(r.lat, r.lon),
+                battery_soc=r.battery_soc,
+                time_remaining=r.time_remaining,
+                hazard_map=np.zeros((100, 100)),  # simple default
+                science_targets=[],
+                current_sol=r.current_sol,
+                temperature=r.temperature,
+                dust_opacity=r.dust_opacity,
+            )
+            rover_contexts.append(RoverContext(rover_id=r.rover_id, state=state))
+        actions = coordinator.coordinate_fleet(rover_contexts)
+        result = {
+            rid: {
+                "type": a.action_type,
+                "target": a.target,
+                "duration": a.duration,
+                "power": a.power_required,
+            } for rid, a in actions.items()
+        }
+        return {"status": "success", "actions": result}
+    except Exception as e:
+        logger.error(f"Fleet coordination failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/federated/update")
+async def federated_update(payload: Dict[str, Any]):
+    """Submit local model weights for aggregation (FedAvg)"""
+    if agg is None:
+        raise HTTPException(status_code=503, detail="Federated aggregator unavailable")
+    weights = payload.get("weights")
+    if weights is None:
+        raise HTTPException(status_code=400, detail="Missing 'weights'")
+    try:
+        agg.add_update(weights)
+        return {"status": "received"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/federated/aggregate")
+async def federated_aggregate():
+    """Aggregate submitted updates and return global weights"""
+    if agg is None:
+        raise HTTPException(status_code=503, detail="Federated aggregator unavailable")
+    try:
+        result = agg.aggregate()
+        return {"status": "success", "weights": result}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/train")

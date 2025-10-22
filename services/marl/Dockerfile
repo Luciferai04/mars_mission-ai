@@ -12,13 +12,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy MARL core code
-COPY ../../src/core/multi_agent_rl.py /app/src/core/
-
-# Copy trained models
-COPY ../../models/marl /models/marl
-
-# Copy application
+# Copy application (core code and models are mounted as volumes via docker-compose)
 COPY app/ /app/
 
 # Environment

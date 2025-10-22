@@ -16,6 +16,13 @@ import os
 import logging
 import time
 from pathlib import Path
+import numpy as np
+
+# Optional OpenCV for tracking
+try:
+    import cv2
+except Exception:
+    cv2 = None
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -211,6 +218,49 @@ async def classify_batch(files: List[UploadFile] = File(...)):
             })
     
     return {"results": results, "model_version": MODEL_VERSION}
+
+
+@app.post("/track_objects")
+async def track_objects(files: List[UploadFile] = File(...)):
+    """Track objects across a sequence of images using optical flow (if OpenCV available)."""
+    if cv2 is None:
+        raise HTTPException(status_code=503, detail="OpenCV not available for tracking")
+    try:
+        frames = []
+        for file in files:
+            contents = await file.read()
+            img = np.frombuffer(contents, dtype=np.uint8)
+            frame = cv2.imdecode(img, cv2.IMREAD_COLOR)
+            if frame is None:
+                raise ValueError(f"Invalid image: {file.filename}")
+            frames.append(frame)
+        if len(frames) < 2:
+            raise HTTPException(status_code=400, detail="At least two frames required")
+        # Initialize feature points on first frame
+        prev_gray = cv2.cvtColor(frames[0], cv2.COLOR_BGR2GRAY)
+        pts = cv2.goodFeaturesToTrack(prev_gray, maxCorners=200, qualityLevel=0.01, minDistance=7)
+        if pts is None:
+            return {"tracks": [], "count": 0}
+        tracks = [[p.ravel().tolist()] for p in pts]
+        p0 = pts
+        for i in range(1, len(frames)):
+            next_gray = cv2.cvtColor(frames[i], cv2.COLOR_BGR2GRAY)
+            p1, st, err = cv2.calcOpticalFlowPyrLK(prev_gray, next_gray, p0, None)
+            if p1 is None or st is None:
+                break
+            good_new = p1[st == 1]
+            good_old = p0[st == 1]
+            # Append to tracks
+            idx = 0
+            for new_pt in good_new:
+                if idx < len(tracks):
+                    tracks[idx].append(new_pt.ravel().tolist())
+                idx += 1
+            prev_gray = next_gray.copy()
+            p0 = good_new.reshape(-1, 1, 2)
+        return {"tracks": tracks[:100], "count": len(tracks)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.post("/generate_hazard_map")

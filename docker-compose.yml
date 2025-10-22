@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # PostgreSQL Database
   postgres:
@@ -13,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database:/docker-entrypoint-initdb.d
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U mars_admin"]
       interval: 10s
@@ -133,6 +131,7 @@ services:
       - ./src/core:/app/src/core
     environment:
       - MODEL_DIR=/models/marl
+      - MARL_ALGO=${MARL_ALGO:-tabular}
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
       interval: 30s
@@ -149,6 +148,8 @@ services:
     container_name: mars-data-integration
     ports:
       - "8004:8004"
+    volumes:
+      - ./src:/app/src
     environment:
       - DATABASE_URL=postgresql://mars_admin:mars_secure_pass@postgres:5432/mars_mission
       - REDIS_URL=redis://redis:6379
@@ -173,6 +174,8 @@ services:
     container_name: mars-planning
     ports:
       - "8005:8005"
+    volumes:
+      - ./src:/app/src
     environment:
       - VISION_SERVICE_URL=http://vision-service:8002
       - MARL_SERVICE_URL=http://marl-service:8003
@@ -183,6 +186,44 @@ services:
       - data-integration-service
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mars-network
+
+  # 3D Visualization Service
+  visualization3d-service:
+    build:
+      context: ./services/visualization3d
+      dockerfile: Dockerfile
+    container_name: mars-visualization3d
+    ports:
+      - "8006:8006"
+    volumes:
+      - ./data:/app/data:ro
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8006/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mars-network
+
+  # Voice Command Service
+  voice-service:
+    build:
+      context: ./services/voice
+      dockerfile: Dockerfile
+    container_name: mars-voice
+    ports:
+      - "8007:8007"
+    environment:
+      - PLANNING_SERVICE_URL=http://planning-service:8005
+    depends_on:
+      - planning-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8007/health"]
       interval: 30s
       timeout: 10s
       retries: 3

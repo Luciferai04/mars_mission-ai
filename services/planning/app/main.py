@@ -13,6 +13,15 @@ import logging
 from datetime import datetime
 import asyncio
 import os
+import sys
+from pathlib import Path
+
+# Ensure project src is importable
+sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
+
+from src.core.autonomous_experiments import ExperimentDesigner
+from src.core.strategic_planner import StrategicPlanner
+from src.integrations.jpl_tools import export_apgen, export_plexil
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -242,6 +251,43 @@ async def create_plan_with_vision(
     except Exception as e:
         logger.error(f"Plan creation with vision failed: {e}")
         raise HTTPException(status_code=500, detail=f"Planning failed: {str(e)}")
+
+
+@app.post("/experiments/propose")
+async def propose_experiments(sol: int, lat: float, lon: float, k: int = 3):
+    """Propose autonomous experiments based on integrated data"""
+    try:
+        data_url = f"{DATA_SERVICE_URL}/integrated?sol={sol}&lat={lat}&lon={lon}"
+        integrated_data = await call_service(data_url)
+        designer = ExperimentDesigner()
+        proposals = designer.propose_experiments(integrated_data, k=k)
+        return {"proposals": proposals, "count": len(proposals)}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/plan/long-term")
+async def plan_long_term(horizon_days: int = 90):
+    """Generate a long-term strategic plan"""
+    try:
+        planner = StrategicPlanner()
+        plan = planner.generate({}, horizon_days=horizon_days)
+        return plan.__dict__
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/export/jpl")
+async def export_jpl(plan: Dict[str, Any], fmt: str = "plexil"):
+    """Export mission plan to JPL planning tool formats (simplified)."""
+    try:
+        if fmt.lower() == "apgen":
+            content = export_apgen(plan)
+            return {"format": "apgen", "content": content}
+        content = export_plexil(plan)
+        return {"format": "plexil", "content": content}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @app.get("/services/status")

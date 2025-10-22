@@ -48,3 +48,10 @@ dist/
 *.out
 *.toc
 *.synctex.gz
+
+# Node / Expo
+node_modules/
+apps/mobile/node_modules/
+apps/mobile/.expo/
+apps/mobile/.expo-shared/
+logs/mobile_expo_*.log
