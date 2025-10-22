@@ -16,6 +16,7 @@ import numpy as np
 from typing import Any
 import sys
 from pathlib import Path
+import os
 
 # Ensure project src is on path for local imports
 sys.path.insert(0, str(Path(__file__).parent.parent.parent.parent))
@@ -25,6 +26,12 @@ try:
     from src.core.predictive_maintenance import MaintenancePredictor
 except Exception:
     MaintenancePredictor = None  # type: ignore
+
+# Optional NASA client
+try:
+    from src.data_pipeline.nasa_api_client import NASAAPIClient
+except Exception:
+    NASAAPIClient = None  # type: ignore
 
 # Initialize logging
 logging.basicConfig(level=logging.INFO)
@@ -74,6 +81,10 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
+# NASA client configuration (optional real data)
+NASA_CLIENT = None
+USE_REAL_NASA = os.getenv("USE_REAL_NASA", "false").lower() in {"1", "true", "yes"}
+
 # Pydantic models
 class MarsEnvironment(BaseModel):
     sol: int
@@ -106,9 +117,25 @@ class IntegratedData(BaseModel):
 # In production, these would connect to real Mars data APIs
 
 async def fetch_environment_data(sol: int) -> Dict[str, Any]:
-    """Fetch environmental data for a given sol"""
-    # Mock data - replace with real API calls
-    # e.g., Mars Weather API, REMS data
+    """Fetch environmental data for a given sol.
+    Uses real NASA API if configured, else returns mock data.
+    """
+    global NASA_CLIENT
+    if USE_REAL_NASA and NASA_CLIENT is not None:
+        try:
+            env = NASA_CLIENT.get_environmental_data(sol=sol) or {}
+            return {
+                "sol": sol,
+                "temp_c": env.get("temperature_c", env.get("temp_c", -63.0)),
+                "wind_speed": env.get("wind_speed_ms", env.get("wind_speed", 2.1)),
+                "pressure": env.get("pressure_pa", 750.0),
+                "uv_index": env.get("uv_index", 2.5),
+                "dust_opacity": env.get("dust_opacity", 0.4),
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        except Exception as e:
+            logger.warning(f"NASA env fetch failed, using mock: {e}")
+    # Fallback mock
     return {
         "sol": sol,
         "temp_c": -63.0,
@@ -314,6 +341,20 @@ async def maintenance_train():
         return {"status": "trained", "samples": int(n)}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize optional NASA client"""
+    global NASA_CLIENT
+    if USE_REAL_NASA and NASAAPIClient is not None:
+        key = os.getenv("NASA_API_KEY")
+        if key:
+            try:
+                NASA_CLIENT = NASAAPIClient(api_key=key)
+                logger.info("NASA API client initialized")
+            except Exception as e:
+                logger.warning(f"NASA client init failed: {e}")
 
 
 @app.post("/data-sources/register")

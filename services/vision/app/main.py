@@ -10,6 +10,11 @@ from pydantic import BaseModel
 from typing import List, Dict, Optional
 import torch
 import torchvision.transforms as transforms
+from torchvision.models import convnext_tiny
+try:
+    from torchvision.models import ConvNeXt_Tiny_Weights
+except Exception:
+    ConvNeXt_Tiny_Weights = None
 from PIL import Image
 import io
 import os
@@ -89,8 +94,20 @@ def load_model():
             model.eval()
             logger.info(f"Model loaded from {model_path}")
         else:
-            logger.warning(f"Model file not found: {model_path}")
-            model = None
+            # Fallback: build ConvNeXt-Tiny with ImageNet weights and a 3-class head
+            try:
+                if ConvNeXt_Tiny_Weights is not None:
+                    base = convnext_tiny(weights=ConvNeXt_Tiny_Weights.DEFAULT)
+                else:
+                    base = convnext_tiny(weights=None)
+                in_features = base.classifier[-1].in_features if hasattr(base.classifier[-1], 'in_features') else 768
+                base.classifier[-1] = torch.nn.Linear(in_features, 3)
+                model = base.to(device)
+                model.eval()
+                logger.warning("Model file not found; using ConvNeXt-Tiny with ImageNet weights and an untrained 3-class head (SAFE/CAUTION/HAZARD)")
+            except Exception as e:
+                logger.error(f"Model fallback failed: {e}")
+                model = None
         
         # Define transforms
         transform = transforms.Compose([
