@@ -1,4 +1,219 @@
-# Mars Mission AI - Autonomous Mission Planning System
+# Mars Mission AI
+
+Autonomous, microservice‑based mission planning for Mars rovers combining vision, multi‑agent reinforcement learning (MARL), streaming data integration, and rigorous documentation for publication‑grade use.
+
+---
+
+## Executive Summary
+
+Mars Mission AI orchestrates rover operations across perception, planning, and execution:
+- Vision: terrain hazard classification (ConvNeXt‑Tiny), batch inference, and optical‑flow object tracking
+- MARL: five specialized agents with optional DQN backend (Double DQN) and weighted coordination
+- Planning: multi‑objective plan synthesis with long‑term strategy and JPL export (APGEN/PLEXIL‑like)
+- Data: real‑time integration, telemetry streaming via WebSockets, and predictive maintenance
+- UX: 3D terrain viewer (Three.js) and a voice command microservice; mobile app (Expo) for monitoring
+
+The system is containerized, documented with LaTeX/TikZ diagrams for technical publishing, and wired with CI smoke tests.
+
+---
+
+## Table of Contents
+
+- Overview and Capabilities
+- Architecture and Diagrams
+- Services and Endpoints
+- Quick Start (Docker)
+- Development (Python) and Testing
+- Training and Model Lifecycle
+- Streaming, Mobile, and 3D Visualization
+- Configuration and Environment
+- CI/CD
+- Repository Layout
+- License and Acknowledgments
+
+---
+
+## Overview and Capabilities
+
+- Multi‑service architecture (FastAPI) behind Kong API Gateway
+- Five MARL agents (route, power, science, hazard, strategy) with DQN option (Double DQN)
+- Data integration with telemetry, environment, targets, and terrain features
+- Vision service for hazard classification and object tracking
+- Long‑term (sols→months) strategic planning and export to JPL tool formats
+- WebSockets telemetry; mobile monitoring app; 3D terrain viewer served as a microservice
+- Predictive maintenance (learned risk scoring) and optional federated learning (FedAvg)
+
+---
+
+## Architecture and Diagrams
+
+Publication‑quality diagrams (LaTeX/TikZ):
+- Source: `docs/tikz_diagrams.tex` (18 diagrams)
+- PDF: `docs/tikz_diagrams.pdf`
+- Guide: `docs/TIKZ_DIAGRAMS_GUIDE.md`
+
+Key diagrams include high‑level system architecture, MARL internals (Double DQN), multi‑rover coordination, telemetry streaming, voice command flow, federated learning, 3D visualization, strategic planning, and JPL export.
+
+---
+
+## Services and Endpoints
+
+- Vision (8002)
+  - GET `/health`, GET `/model_info`
+  - POST `/classify_hazard` (file), POST `/classify_batch` (files)
+  - POST `/track_objects` (files; OpenCV optical flow), POST `/reload_model`
+- MARL (8003)
+  - POST `/optimize` (mission context)
+  - GET `/agents/stats`, GET `/agents/confidence`, POST `/agents/reload`
+  - POST `/coordinate_fleet` (multi‑rover)
+  - POST `/federated/update`, GET `/federated/aggregate`
+- Data Integration (8004)
+  - GET `/environment/{sol}`, GET `/terrain`, GET `/science-targets`, GET `/integrated`
+  - WS `/ws/telemetry`, POST `/publish/telemetry`
+  - POST `/maintenance/train`, POST `/maintenance/predict`
+- Planning (8005)
+  - POST `/plan`
+  - POST `/experiments/propose`, POST `/plan/long-term`, POST `/export/jpl?fmt=plexil|apgen`
+- Visualization3D (8006)
+  - GET `/heightmap` and static Three.js viewer at `/`
+- Voice (8007)
+  - POST `/command/execute`
+
+---
+
+## Quick Start (Docker)
+
+Prerequisites: Docker Desktop (Compose v2), Git LFS for large files (`brew install git-lfs && git lfs install`).
+
+```bash
+# Clone
+git clone https://github.com/yourusername/mars_mission-ai.git
+cd mars_mission-ai
+
+# Launch all services with DQN agents enabled
+MARL_ALGO=dqn docker compose up -d --build
+
+# (Optional) Configure Kong demo routes
+chmod +x scripts/configure_gateway.sh
+./scripts/configure_gateway.sh
+
+# Verify
+curl -s http://localhost:8005/health || true
+curl -s http://localhost:8005/services/status | jq . || true
+```
+
+Smoke checks:
+```bash
+# Plan
+curl -sX POST http://localhost:8005/plan \
+  -H 'Content-Type: application/json' \
+  -d '{"sol":1600,"lat":18.4447,"lon":77.4508,"battery_soc":0.65,"time_budget_min":480,"objectives":["traverse","image","sample"]}'
+
+# Fleet
+curl -sX POST http://localhost:8003/coordinate_fleet \
+  -H 'Content-Type: application/json' \
+  -d '{"rovers":[{"rover_id":"percy","lat":18.444,"lon":77.451,"battery_soc":0.6,"time_remaining":300},{"rover_id":"helicopter","lat":18.446,"lon":77.452,"battery_soc":0.8,"time_remaining":200}]}'
+```
+
+---
+
+## Development (Python) and Testing
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# Lint & format
+ruff check src/ tests/
+black --check src/ tests/
+
+# Unit tests
+pytest -v --cov=src --cov-report=xml
+```
+
+---
+
+## Training and Model Lifecycle
+
+- MARL (tabular by default; DQN if `MARL_ALGO=dqn` in env)
+```bash
+# Train
+python scripts/train_marl.py --episodes 2000 --save-interval 250
+# Hot‑reload service models
+curl -X POST http://localhost:8003/agents/reload
+```
+- Vision model: ConvNeXt‑Tiny classifier (`models/terrain_vision_convnext.pth`), classes: SAFE | CAUTION | HAZARD
+- Predictive maintenance: train and query via data integration endpoints
+- Federated learning (demo): submit client weights and aggregate via MARL service
+
+Large artifacts are tracked via Git LFS (see `.gitattributes`).
+
+---
+
+## Streaming, Mobile, and 3D Visualization
+
+- Telemetry streaming: publish via `POST /publish/telemetry`; consume `ws://localhost:8004/ws/telemetry`
+- Mobile app (Expo):
+```bash
+cd apps/mobile
+npm i
+EXPO_USE_WATCHMAN=1 npm start  # Metro; logs under logs/mobile_expo_*.log
+```
+- 3D viewer: http://localhost:8006 (serves `/heightmap` JSON and a Three.js terrain viewer)
+
+---
+
+## Configuration and Environment
+
+Core environment variables (examples):
+- `VISION_SERVICE_URL`, `MARL_SERVICE_URL`, `DATA_SERVICE_URL`
+- `OPENAI_API_KEY`, `NASA_API_KEY` (if used by optional modules)
+- `MODEL_DIR` (e.g., `/models/marl` inside containers), `MARL_ALGO` (`tabular`|`dqn`)
+- `DATABASE_URL`, `REDIS_URL` (data integration service)
+
+Compose mounts models and source where appropriate; see `docker-compose.yml` for per‑service configuration.
+
+---
+
+## CI/CD
+
+GitHub Actions workflow (`.github/workflows/ci.yml`) includes:
+- Linting and unit tests (Python 3.10/3.11)
+- Docker image build (optional push)
+- Docker Compose smoke tests: bring the stack up, wait for health, call `/plan` and `/coordinate_fleet`, then tear down
+
+---
+
+## Repository Layout
+
+```
+mars_mission-ai/
+  services/
+    vision/               # Vision microservice (FastAPI)
+    marl/                 # MARL microservice (FastAPI)
+    data-integration/     # Data/telemetry microservice (FastAPI + WS)
+    planning/             # Orchestrator/planner (FastAPI)
+    visualization3d/      # Three.js viewer service
+    voice/                # Voice-to-planning microservice
+  src/
+    core/                 # Core algorithms (MARL, DQN, strategy, maintenance, etc.)
+    data_pipeline/        # NASA data and DEM utilities
+    interfaces/           # Web interface and endpoints (legacy/demo)
+    integrations/         # JPL export adapters
+  models/                 # Model directories (LFS tracked)
+  docs/                   # TikZ diagrams and guides
+  tests/                  # Unit/integration tests
+  docker-compose.yml      # Orchestration
+```
+
+---
+
+## License and Acknowledgments
+
+MIT License. See `LICENSE`.
+
+Acknowledgments: NASA Mars data sources; FastAPI; Kong; OpenCV; PyTorch; Expo; and the PGF/TikZ community for diagram tooling.
 
 ## Table of Contents
 
