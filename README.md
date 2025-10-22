@@ -52,7 +52,41 @@ Publication‑quality diagrams (LaTeX/TikZ):
 - PDF: `docs/tikz_diagrams.pdf`
 - Guide: `docs/TIKZ_DIAGRAMS_GUIDE.md`
 
-Key diagrams include high‑level system architecture, MARL internals (Double DQN), multi‑rover coordination, telemetry streaming, voice command flow, federated learning, 3D visualization, strategic planning, and JPL export.
+Selected diagrams:
+
+- High‑Level Architecture
+  
+  ![High‑Level Architecture](docs/diagrams/diagram-1.png)
+
+- MARL System Architecture
+  
+  ![MARL System Architecture](docs/diagrams/diagram-2.png)
+
+- Data Flow Sequence
+  
+  ![Data Flow Sequence](docs/diagrams/diagram-3.png)
+
+- Docker Deployment Architecture
+  
+  ![Deployment Architecture](docs/diagrams/diagram-4.png)
+
+- MARL State‑Action Space
+  
+  ![MARL State‑Action Space](docs/diagrams/diagram-5.png)
+
+- MARL Training Performance
+  
+  ![MARL Training Performance](docs/diagrams/diagram-6.png)
+
+- Service Response Times (P95)
+  
+  ![Service Response Times](docs/diagrams/diagram-7.png)
+
+- Microservices Communication Pattern
+  
+  ![Microservices Communication Pattern](docs/diagrams/diagram-8.png)
+
+For the complete set (including DQN, fleet coordination, streaming, voice, federated, 3D viewer, strategic planning, JPL export, and mobile architecture), see the PDF and guide above.
 
 ---
 
