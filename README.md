@@ -23,9 +23,11 @@ The system is containerized, documented with LaTeX/TikZ diagrams for technical p
 - Architecture and Diagrams
 - Services and Endpoints
 - Quick Start (Docker)
+- Security (Kong API Gateway)
 - Development (Python) and Testing
 - Training and Model Lifecycle
 - Streaming, Mobile, and 3D Visualization
+- Observability (Metrics & SLAs)
 - Configuration and Environment
 - CI/CD
 - Repository Layout
@@ -135,20 +137,20 @@ For the complete set and compilation instructions, see the PDF and guide above.
 ## Services and Endpoints
 
 - Vision (8002)
-  - GET `/health`, GET `/model_info`
+  - GET `/health`, GET `/model_info`, GET `/metrics`
   - POST `/classify_hazard` (file), POST `/classify_batch` (files)
   - POST `/track_objects` (files; OpenCV optical flow), POST `/reload_model`
 - MARL (8003)
   - POST `/optimize` (mission context)
-  - GET `/agents/stats`, GET `/agents/confidence`, POST `/agents/reload`
+  - GET `/agents/stats`, GET `/agents/confidence`, POST `/agents/reload`, GET `/metrics`
   - POST `/coordinate_fleet` (multi‑rover)
   - POST `/federated/update`, GET `/federated/aggregate`
 - Data Integration (8004)
-  - GET `/environment/{sol}`, GET `/terrain`, GET `/science-targets`, GET `/integrated`
+  - GET `/environment/{sol}`, GET `/terrain`, GET `/science-targets`, GET `/integrated`, GET `/metrics`
   - WS `/ws/telemetry`, POST `/publish/telemetry`
   - POST `/maintenance/train`, POST `/maintenance/predict`
 - Planning (8005)
-  - POST `/plan`
+  - POST `/plan`, GET `/metrics`
   - POST `/experiments/propose`, POST `/plan/long-term`, POST `/export/jpl?fmt=plexil|apgen`
 - Visualization3D (8006)
   - GET `/heightmap` and static Three.js viewer at `/`
@@ -173,9 +175,16 @@ MARL_ALGO=dqn docker compose up -d --build
 chmod +x scripts/configure_gateway.sh
 ./scripts/configure_gateway.sh
 
-# Verify
+# (Optional) Enable key-auth + rate limits (Kong) and Prometheus plugin
+chmod +x scripts/configure_gateway_auth.sh
+./scripts/configure_gateway_auth.sh  # creates consumer 'demo' with apikey=demo-key
+
+# Verify (direct)
 curl -s http://localhost:8005/health || true
 curl -s http://localhost:8005/services/status | jq . || true
+
+# Verify (via Kong, with API key)
+curl -s -H 'apikey: demo-key' http://localhost:8000/planning/health | jq . || true
 ```
 
 Smoke checks:
@@ -192,6 +201,12 @@ curl -sX POST http://localhost:8003/coordinate_fleet \
 ```
 
 ---
+
+## Security (Kong API Gateway)
+
+- Routes are configured under `/vision`, `/marl`, `/data`, `/planning` via `scripts/configure_gateway.sh`.
+- To enforce API key authentication and basic rate limits per service, run `scripts/configure_gateway_auth.sh`.
+- Use header `apikey: demo-key` (or your configured key) when calling via `http://localhost:8000/...`.
 
 ## Development (Python) and Testing
 
@@ -230,6 +245,11 @@ Large artifacts are tracked via Git LFS (see `.gitattributes`).
 ## Streaming, Mobile, and 3D Visualization
 
 - Telemetry streaming: publish via `POST /publish/telemetry`; consume `ws://localhost:8004/ws/telemetry`
+- Publisher script for synthetic telemetry:
+```bash
+. .venv/bin/activate
+python scripts/publish_telemetry.py --url http://localhost:8004 --rate 2
+```
 - Mobile app (Expo):
 ```bash
 cd apps/mobile
@@ -240,11 +260,18 @@ EXPO_USE_WATCHMAN=1 npm start  # Metro; logs under logs/mobile_expo_*.log
 
 ---
 
+## Observability (Metrics & SLAs)
+
+- Prometheus metrics: `GET /metrics` on Vision (8002), MARL (8003), Data (8004), Planning (8005)
+- Optional Prometheus/Grafana stack can be added (see examples in README Monitoring section)
+- Operational SLOs and runbooks: `docs/SLA.md`
+
 ## Configuration and Environment
 
 Core environment variables (examples):
 - `VISION_SERVICE_URL`, `MARL_SERVICE_URL`, `DATA_SERVICE_URL`
 - `OPENAI_API_KEY`, `NASA_API_KEY` (if used by optional modules)
+- `USE_REAL_NASA` (true/false to enable NASA data client), `NASA_API_KEY` (required if true)
 - `MODEL_DIR` (e.g., `/models/marl` inside containers), `MARL_ALGO` (`tabular`|`dqn`)
 - `DATABASE_URL`, `REDIS_URL` (data integration service)
 
@@ -258,6 +285,7 @@ GitHub Actions workflow (`.github/workflows/ci.yml`) includes:
 - Linting and unit tests (Python 3.10/3.11)
 - Docker image build (optional push)
 - Docker Compose smoke tests: bring the stack up, wait for health, call `/plan` and `/coordinate_fleet`, then tear down
+- k6 load smoke: 30s, 5 VUs hitting `/plan` (tests/k6/plan_smoke.js)
 
 ---
 
