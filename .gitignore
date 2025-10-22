@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+.venv/
+env/
+ENV/
+.coverage
+htmlcov/
+*.log
+
+# IDEs
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Project specific
+data/cache/
+data/temp/
+logs/*.log
+logs/*.jsonl
+tmp/
+temp/
+
+# Models (too large for git)
+models/vision/*.pth
+models/vision/*.bin
+data/dem/*.tif
+
+# Environment
+.env
+*.key
+*.pem
+
+# Build
+build/
+dist/
+*.egg-info/
+
+# LaTeX
+*.aux
+*.log
+*.out
+*.toc
+*.synctex.gz

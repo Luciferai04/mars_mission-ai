@@ -1,0 +1,96 @@
+# Essential Files for GitHub Repository
+
+## Core Application Files
+src/
+├── core/
+│   ├── multi_agent_rl.py          # MARL system (ESSENTIAL)
+│   ├── mission_planner.py         # Mission planning logic
+│   └── terrain_analyzer.py        # Vision analysis
+├── interfaces/
+│   ├── web_api.py                 # Main FastAPI application
+│   ├── marl_endpoint.py           # MARL API endpoints
+│   ├── chat_interface.html        # Web UI
+│   └── demo_dashboard.html        # Dashboard UI
+└── utils/
+    ├── logging_config.py          # Logging setup
+    └── validators.py              # Input validation
+
+## Microservices (ESSENTIAL)
+services/
+├── vision/
+│   ├── app/main.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── marl/
+│   ├── app/main.py
+│   ├── Dockerfile
+│   └── requirements.txt
+├── data-integration/
+│   ├── app/main.py
+│   ├── Dockerfile
+│   └── requirements.txt
+└── planning/
+    ├── app/main.py
+    ├── Dockerfile
+    └── requirements.txt
+
+## Trained Models (ESSENTIAL)
+models/
+├── marl/
+│   ├── route_agent.pkl
+│   ├── power_agent.pkl
+│   ├── science_agent.pkl
+│   ├── hazard_agent.pkl
+│   └── strategy_agent.pkl
+└── vision/
+    └── (HuggingFace models downloaded on runtime)
+
+## Scripts (ESSENTIAL)
+scripts/
+├── train_marl.py                  # Training script
+└── configure_gateway.sh           # Gateway setup
+
+## Configuration (ESSENTIAL)
+├── docker-compose.yml             # Service orchestration
+├── requirements.txt               # Python dependencies
+├── .env.example                   # Environment template
+├── .gitignore                     # Git ignore rules
+└── .dockerignore                  # Docker ignore rules
+
+## Database (ESSENTIAL)
+database/
+├── init.sql                       # Database initialization
+└── schema.sql                     # Database schema
+
+## Documentation (ESSENTIAL)
+├── README.md                      # Main documentation
+├── MARL_SYSTEM.md                # MARL documentation
+├── MICROSERVICES_DEPLOYMENT.md   # Deployment guide
+├── docs/
+│   ├── tikz_diagrams.tex         # Diagram source
+│   ├── tikz_diagrams.pdf         # Compiled diagrams
+│   └── TIKZ_DIAGRAMS_GUIDE.md    # Diagram guide
+
+## Tests (ESSENTIAL)
+tests/
+├── test_marl.py
+├── test_vision.py
+└── test_integration.py
+
+## GitHub Specific (ESSENTIAL)
+.github/
+└── workflows/
+    └── ci.yml                     # CI/CD pipeline
+
+## License & Contributing
+├── LICENSE
+├── CONTRIBUTING.md
+└── CODE_OF_CONDUCT.md
+
+## Output/Results Screenshots
+docs/screenshots/                  # Add this directory
+├── marl_training.png
+├── vision_analysis.png
+├── mission_plan_output.png
+├── dashboard.png
+└── architecture_diagram.png

@@ -1,0 +1,11 @@
+{
+  "test_timestamp": "2025-10-19T21:09:23.475428",
+  "model_path": "models/hazard_detector_latest.pkl",
+  "dem_path": "data/dem/jezero_demo.npy",
+  "num_test_points": 64,
+  "predictions": {
+    "CAUTION": 8,
+    "HAZARD": 56
+  },
+  "visualization": "data/exports/hazard_predictions_20251019_210923.png"
+}

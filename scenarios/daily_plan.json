@@ -1,0 +1,26 @@
+{
+  "scenario": "Daily nominal operations",
+  "goals": [
+    "Perform daily system health checks",
+    "Conduct Mastcam-Z panoramic imaging",
+    "Analyze rock sample with SuperCam",
+    "Complete data transmission to Earth"
+  ],
+  "constraints": {
+    "time_budget_min": 480,
+    "power_budget_wh": 1200,
+    "data_budget_mb": 250,
+    "max_drive_m": 100,
+    "comm_windows": [
+      {"start_min": 420, "end_min": 450}
+    ]
+  },
+  "rover_state": {
+    "location": {
+      "lat": 18.4447,
+      "lon": 77.4508
+    },
+    "sol": 1400,
+    "battery_soc": 0.85
+  }
+}

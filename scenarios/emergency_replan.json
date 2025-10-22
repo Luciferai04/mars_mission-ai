@@ -1,0 +1,32 @@
+{
+  "scenario": "Dust storm incoming - emergency replan",
+  "goals": [
+    "Secure rover in safe protected location",
+    "Minimize all power consumption",
+    "Activate survival heating protocols",
+    "Store critical science data",
+    "Establish emergency communication schedule"
+  ],
+  "constraints": {
+    "time_budget_min": 120,
+    "power_budget_wh": 400,
+    "data_budget_mb": 50,
+    "max_drive_m": 30,
+    "comm_windows": [
+      {"start_min": 60, "end_min": 75}
+    ]
+  },
+  "rover_state": {
+    "location": {
+      "lat": 18.4447,
+      "lon": 77.4508
+    },
+    "sol": 1401,
+    "battery_soc": 0.65,
+    "environmental": {
+      "temperature_c": -72,
+      "wind_speed_ms": 18,
+      "dust_opacity": 0.85
+    }
+  }
+}

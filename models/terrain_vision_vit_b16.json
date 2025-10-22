@@ -1,0 +1,6 @@
+{
+  "best_val_acc": 100.0,
+  "epochs": 1,
+  "arch": "vit_b16",
+  "timestamp": 1761133582.8067179
+}

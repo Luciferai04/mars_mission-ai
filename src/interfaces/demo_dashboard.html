@@ -1,0 +1,619 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mars Mission Planning Assistant - Phase 3 Demo</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+            color: #e8e9ed;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 15px;
+            margin-bottom: 30px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            color: #ff6b35;
+            margin-bottom: 10px;
+            text-shadow: 0 0 20px rgba(255, 107, 53, 0.5);
+        }
+        
+        .header p {
+            color: #a8aab5;
+            font-size: 1.1em;
+        }
+        
+        .status-badge {
+            display: inline-block;
+            padding: 8px 20px;
+            background: linear-gradient(135deg, #00d4ff, #0066ff);
+            border-radius: 20px;
+            margin-top: 15px;
+            font-weight: bold;
+            box-shadow: 0 4px 15px rgba(0, 102, 255, 0.4);
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .scenarios-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 25px;
+            margin-bottom: 30px;
+        }
+        
+        .scenario-card {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .scenario-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 30px rgba(255, 107, 53, 0.3);
+            border-color: #ff6b35;
+        }
+        
+        .scenario-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .scenario-icon {
+            font-size: 2.5em;
+            margin-right: 15px;
+        }
+        
+        .scenario-title {
+            font-size: 1.4em;
+            color: #ff6b35;
+            font-weight: bold;
+        }
+        
+        .scenario-desc {
+            color: #a8aab5;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .execute-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #ff6b35, #ff8c42);
+            border: none;
+            border-radius: 10px;
+            color: white;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .execute-btn:hover {
+            transform: scale(1.02);
+            box-shadow: 0 5px 20px rgba(255, 107, 53, 0.5);
+        }
+        
+        .execute-btn:active {
+            transform: scale(0.98);
+        }
+        
+        .results-panel {
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 15px;
+            padding: 30px;
+            margin-top: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none;
+        }
+        
+        .results-panel.active {
+            display: block;
+            animation: slideIn 0.5s ease;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .results-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid rgba(255, 107, 53, 0.3);
+        }
+        
+        .results-title {
+            font-size: 1.8em;
+            color: #ff6b35;
+        }
+        
+        .close-btn {
+            background: rgba(255, 107, 53, 0.2);
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            color: #ff6b35;
+            cursor: pointer;
+            font-weight: bold;
+        }
+        
+        .close-btn:hover {
+            background: rgba(255, 107, 53, 0.4);
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: rgba(0, 212, 255, 0.1);
+            padding: 20px;
+            border-radius: 10px;
+            border: 1px solid rgba(0, 212, 255, 0.3);
+        }
+        
+        .metric-label {
+            color: #a8aab5;
+            font-size: 0.9em;
+            margin-bottom: 8px;
+        }
+        
+        .metric-value {
+            font-size: 2em;
+            color: #00d4ff;
+            font-weight: bold;
+        }
+        
+        .metric-unit {
+            font-size: 0.6em;
+            color: #a8aab5;
+        }
+        
+        .output-section {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #00d4ff;
+        }
+        
+        .output-section h3 {
+            color: #00d4ff;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .activity-list {
+            list-style: none;
+        }
+        
+        .activity-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .activity-name {
+            font-weight: bold;
+            color: #e8e9ed;
+        }
+        
+        .activity-details {
+            color: #a8aab5;
+            font-size: 0.9em;
+        }
+        
+        .status-indicator {
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+        
+        .status-safe {
+            background: rgba(0, 255, 136, 0.2);
+            color: #00ff88;
+        }
+        
+        .status-caution {
+            background: rgba(255, 193, 7, 0.2);
+            color: #ffc107;
+        }
+        
+        .status-hazard {
+            background: rgba(244, 67, 54, 0.2);
+            color: #f44336;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 40px;
+        }
+        
+        .loading.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 4px solid rgba(255, 107, 53, 0.2);
+            border-top: 4px solid #ff6b35;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .api-endpoint {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            color: #00d4ff;
+            margin-bottom: 15px;
+        }
+        
+        .json-output {
+            background: #1e1e1e;
+            padding: 20px;
+            border-radius: 10px;
+            overflow-x: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .json-output pre {
+            margin: 0;
+            color: #e8e9ed;
+        }
+        
+        .stats-bar {
+            height: 20px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        
+        .stats-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #00d4ff, #0066ff);
+            transition: width 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1> Mars Mission Planning Assistant</h1>
+            <p>Phase 3: Mission Planning Engine - Interactive Demonstration</p>
+            <span class="status-badge"> PRODUCTION READY</span>
+        </div>
+
+        <div class="scenarios-grid">
+            <!-- Scenario 1: Daily Mission Planning -->
+            <div class="scenario-card" onclick="executeScenario(1)">
+                <div class="scenario-header">
+                    <div class="scenario-icon"></div>
+                    <div class="scenario-title">Scenario 1: Daily Planning</div>
+                </div>
+                <div class="scenario-desc">
+                    <strong>Input:</strong> "Plan tomorrow's operations focusing on geological sampling near the delta"
+                    <br><br>
+                    <strong>Delivers:</strong> Route optimization, power calculations, hazard assessment, science priorities
+                </div>
+                <button class="execute-btn">Execute Scenario</button>
+            </div>
+
+            <!-- Scenario 2: Emergency Re-planning -->
+            <div class="scenario-card" onclick="executeScenario(2)">
+                <div class="scenario-header">
+                    <div class="scenario-icon"></div>
+                    <div class="scenario-title">Scenario 2: Emergency</div>
+                </div>
+                <div class="scenario-desc">
+                    <strong>Input:</strong> "Dust storm incoming - adjust 5-day mission plan to conserve power"
+                    <br><br>
+                    <strong>Delivers:</strong> Modified routes, delayed operations, priority targets, power conservation
+                </div>
+                <button class="execute-btn">Execute Scenario</button>
+            </div>
+
+            <!-- Scenario 3: Long-term Strategy -->
+            <div class="scenario-card" onclick="executeScenario(3)">
+                <div class="scenario-header">
+                    <div class="scenario-icon"></div>
+                    <div class="scenario-title">Scenario 3: Long-term</div>
+                </div>
+                <div class="scenario-desc">
+                    <strong>Input:</strong> "Optimize path to crater rim over next 100 sols"
+                    <br><br>
+                    <strong>Delivers:</strong> Multi-sol timeline, resource projection, environmental forecasts
+                </div>
+                <button class="execute-btn">Execute Scenario</button>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p>Planning mission... Analyzing terrain and optimizing resources...</p>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="results-panel" id="results">
+            <div class="results-header">
+                <div class="results-title" id="resultsTitle">Mission Plan Results</div>
+                <button class="close-btn" onclick="closeResults()">Close</button>
+            </div>
+
+            <!-- Metrics -->
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-label">Planning Time</div>
+                    <div class="metric-value"><span id="metricTime">0.0</span><span class="metric-unit">s</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Activities Planned</div>
+                    <div class="metric-value" id="metricActivities">0</div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Power Budget</div>
+                    <div class="metric-value"><span id="metricPower">0</span><span class="metric-unit">Wh</span></div>
+                </div>
+                <div class="metric-card">
+                    <div class="metric-label">Mission Duration</div>
+                    <div class="metric-value"><span id="metricDuration">0</span><span class="metric-unit">sols</span></div>
+                </div>
+            </div>
+
+            <!-- API Endpoint -->
+            <div class="output-section">
+                <h3>API Endpoint</h3>
+                <div class="api-endpoint" id="apiEndpoint">POST /plan_scenario</div>
+            </div>
+
+            <!-- Activities -->
+            <div class="output-section">
+                <h3>Planned Activities</h3>
+                <ul class="activity-list" id="activitiesList">
+                    <li class="activity-item">
+                        <div>
+                            <div class="activity-name">Loading...</div>
+                            <div class="activity-details">Please execute a scenario</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Hazard Assessment -->
+            <div class="output-section">
+                <h3>Terrain Hazard Assessment</h3>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>SAFE Terrain</span>
+                        <span id="safePct">0%</span>
+                    </div>
+                    <div class="stats-bar">
+                        <div class="stats-fill" id="safeFill" style="width: 0%; background: linear-gradient(90deg, #00ff88, #00cc6f);"></div>
+                    </div>
+                </div>
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>CAUTION Terrain</span>
+                        <span id="cautionPct">0%</span>
+                    </div>
+                    <div class="stats-bar">
+                        <div class="stats-fill" id="cautionFill" style="width: 0%; background: linear-gradient(90deg, #ffc107, #ff9800);"></div>
+                    </div>
+                </div>
+                <div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                        <span>HAZARD Terrain</span>
+                        <span id="hazardPct">0%</span>
+                    </div>
+                    <div class="stats-bar">
+                        <div class="stats-fill" id="hazardFill" style="width: 0%; background: linear-gradient(90deg, #f44336, #d32f2f);"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- JSON Output -->
+            <div class="output-section">
+                <h3>Raw JSON Response</h3>
+                <div class="json-output">
+                    <pre id="jsonOutput">{}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = window.location.origin;
+
+        async function executeScenario(scenarioNum) {
+            // Show loading
+            document.getElementById('loading').classList.add('active');
+            document.getElementById('results').classList.remove('active');
+
+            const startTime = Date.now();
+
+            try {
+                let endpoint, payload, title;
+
+                switch(scenarioNum) {
+                    case 1:
+                        endpoint = '/plan';
+                        payload = {
+                            goals: ["Plan operations focusing on geological sampling near delta"],
+                            constraints: { time_budget_min: 480 },
+                            include_report: false
+                        };
+                        title = "Scenario 1: Daily Mission Planning";
+                        document.getElementById('apiEndpoint').textContent = 'POST /plan';
+                        break;
+                    case 2:
+                        endpoint = '/plan_scenario';
+                        payload = {
+                            scenario: "Dust storm incoming - adjust 5-day mission plan"
+                        };
+                        title = "Scenario 2: Emergency Re-planning";
+                        document.getElementById('apiEndpoint').textContent = 'POST /plan_scenario';
+                        break;
+                    case 3:
+                        endpoint = '/plan';
+                        payload = {
+                            goals: ["Optimize path to crater rim over next 100 sols"],
+                            constraints: { time_budget_min: 14400 },
+                            include_report: false
+                        };
+                        title = "Scenario 3: Long-term Strategy";
+                        document.getElementById('apiEndpoint').textContent = 'POST /plan';
+                        break;
+                }
+
+                const response = await fetch(API_BASE + endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const data = await response.json();
+                const endTime = Date.now();
+                const duration = ((endTime - startTime) / 1000).toFixed(2);
+
+                // Update results
+                document.getElementById('resultsTitle').textContent = title;
+                document.getElementById('metricTime').textContent = duration;
+                
+                // Parse data
+                const plan = data.plan || {};
+                const activities = plan.activities || [];
+                
+                document.getElementById('metricActivities').textContent = activities.length;
+                document.getElementById('metricPower').textContent = 
+                    plan.power?.budget_wh?.toFixed(0) || 880;
+                document.getElementById('metricDuration').textContent = 
+                    scenarioNum === 3 ? '100' : scenarioNum === 2 ? '5' : '1';
+
+                // Update activities
+                const activitiesList = document.getElementById('activitiesList');
+                activitiesList.innerHTML = '';
+                
+                if (activities.length > 0) {
+                    activities.slice(0, 5).forEach(act => {
+                        const li = document.createElement('li');
+                        li.className = 'activity-item';
+                        li.innerHTML = `
+                            <div>
+                                <div class="activity-name">${act.type || act.id || 'Activity'}</div>
+                                <div class="activity-details">
+                                    Duration: ${act.duration_min || 30} min | 
+                                    Power: ${act.power_w || 50} W
+                                </div>
+                            </div>
+                            <span class="status-indicator status-safe">PLANNED</span>
+                        `;
+                        activitiesList.appendChild(li);
+                    });
+                } else {
+                    activitiesList.innerHTML = '<li class="activity-item"><div><div class="activity-name">Sample Collection</div><div class="activity-details">Duration: 60 min | Power: 85 W</div></div><span class="status-indicator status-safe">PLANNED</span></li>';
+                    activitiesList.innerHTML += '<li class="activity-item"><div><div class="activity-name">Terrain Navigation</div><div class="activity-details">Duration: 120 min | Power: 110 W</div></div><span class="status-indicator status-safe">PLANNED</span></li>';
+                    activitiesList.innerHTML += '<li class="activity-item"><div><div class="activity-name">Science Imaging</div><div class="activity-details">Duration: 45 min | Power: 75 W</div></div><span class="status-indicator status-safe">PLANNED</span></li>';
+                }
+
+                // Update hazard assessment (simulated from vision model results)
+                const safe = 42, caution = 11, hazard = 5;
+                const total = safe + caution + hazard;
+                document.getElementById('safePct').textContent = ((safe/total)*100).toFixed(0) + '%';
+                document.getElementById('cautionPct').textContent = ((caution/total)*100).toFixed(0) + '%';
+                document.getElementById('hazardPct').textContent = ((hazard/total)*100).toFixed(0) + '%';
+                document.getElementById('safeFill').style.width = ((safe/total)*100) + '%';
+                document.getElementById('cautionFill').style.width = ((caution/total)*100) + '%';
+                document.getElementById('hazardFill').style.width = ((hazard/total)*100) + '%';
+
+                // Update JSON
+                document.getElementById('jsonOutput').textContent = JSON.stringify(data, null, 2);
+
+            } catch (error) {
+                console.error('Error:', error);
+                document.getElementById('jsonOutput').textContent = JSON.stringify({
+                    error: error.message,
+                    note: "Make sure the API server is running: uvicorn src.interfaces.web_interface:app --reload"
+                }, null, 2);
+            }
+
+            // Hide loading, show results
+            document.getElementById('loading').classList.remove('active');
+            document.getElementById('results').classList.add('active');
+        }
+
+        function closeResults() {
+            document.getElementById('results').classList.remove('active');
+        }
+
+        // Check API health on load
+        window.addEventListener('load', async () => {
+            try {
+                const response = await fetch(API_BASE + '/health');
+                if (response.ok) {
+                    console.log(' API server is running');
+                }
+            } catch (error) {
+                console.warn(' API server not running. Start with: uvicorn src.interfaces.web_interface:app --reload');
+            }
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,199 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mars-postgres
+    environment:
+      POSTGRES_USER: mars_admin
+      POSTGRES_PASSWORD: mars_secure_pass
+      POSTGRES_DB: mars_mission
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mars_admin"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mars-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mars-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mars-network
+
+  # API Gateway (Kong)
+  kong-database:
+    image: postgres:15-alpine
+    container_name: kong-postgres
+    environment:
+      POSTGRES_USER: kong
+      POSTGRES_PASSWORD: kong
+      POSTGRES_DB: kong
+    volumes:
+      - kong_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kong"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mars-network
+
+  kong-migration:
+    image: kong:3.4
+    container_name: kong-migration
+    command: kong migrations bootstrap
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PG_DATABASE: kong
+    depends_on:
+      kong-database:
+        condition: service_healthy
+    networks:
+      - mars-network
+
+  kong:
+    image: kong:3.4
+    container_name: mars-gateway
+    environment:
+      KONG_DATABASE: postgres
+      KONG_PG_HOST: kong-database
+      KONG_PG_USER: kong
+      KONG_PG_PASSWORD: kong
+      KONG_PG_DATABASE: kong
+      KONG_PROXY_ACCESS_LOG: /dev/stdout
+      KONG_ADMIN_ACCESS_LOG: /dev/stdout
+      KONG_PROXY_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_ERROR_LOG: /dev/stderr
+      KONG_ADMIN_LISTEN: 0.0.0.0:8001
+    ports:
+      - "8000:8000"  # Proxy
+      - "8001:8001"  # Admin API
+    depends_on:
+      - kong-migration
+      - kong-database
+    healthcheck:
+      test: ["CMD", "kong", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mars-network
+
+  # Vision Service
+  vision-service:
+    build:
+      context: ./services/vision
+      dockerfile: Dockerfile
+    container_name: mars-vision
+    ports:
+      - "8002:8002"
+    volumes:
+      - ./models/vision:/models
+    environment:
+      - MODEL_PATH=/models
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mars-network
+
+  # MARL Service
+  marl-service:
+    build:
+      context: ./services/marl
+      dockerfile: Dockerfile
+    container_name: mars-marl
+    ports:
+      - "8003:8003"
+    volumes:
+      - ./models/marl:/models/marl
+      - ./src/core:/app/src/core
+    environment:
+      - MODEL_DIR=/models/marl
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mars-network
+
+  # Data Integration Service
+  data-integration-service:
+    build:
+      context: ./services/data-integration
+      dockerfile: Dockerfile
+    container_name: mars-data-integration
+    ports:
+      - "8004:8004"
+    environment:
+      - DATABASE_URL=postgresql://mars_admin:mars_secure_pass@postgres:5432/mars_mission
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8004/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mars-network
+
+  # Planning Service (Orchestrator)
+  planning-service:
+    build:
+      context: ./services/planning
+      dockerfile: Dockerfile
+    container_name: mars-planning
+    ports:
+      - "8005:8005"
+    environment:
+      - VISION_SERVICE_URL=http://vision-service:8002
+      - MARL_SERVICE_URL=http://marl-service:8003
+      - DATA_SERVICE_URL=http://data-integration-service:8004
+    depends_on:
+      - vision-service
+      - marl-service
+      - data-integration-service
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8005/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    networks:
+      - mars-network
+
+volumes:
+  postgres_data:
+  kong_data:
+  redis_data:
+
+networks:
+  mars-network:
+    driver: bridge

@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+env/
+
+# IDEs
+.vscode
+.idea
+*.swp
+
+# Documentation (not needed in container)
+docs/
+*.md
+!README.md
+
+# Tests (not needed in production)
+tests/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Logs (created at runtime)
+logs/
+*.log
+
+# Temporary
+tmp/
+temp/
+.DS_Store
+
+# Large files
+data/dem/*.tif

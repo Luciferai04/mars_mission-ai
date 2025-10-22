@@ -1,0 +1,6 @@
+{
+  "best_val_acc": 83.33333333333333,
+  "epochs": 15,
+  "arch": "convnext_tiny",
+  "timestamp": 1761136457.0309372
+}

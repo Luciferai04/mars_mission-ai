@@ -1,0 +1,33 @@
+{
+  "scenario": "5-sol sample collection campaign",
+  "goals": [
+    "Navigate to delta region for geological survey",
+    "Collect 3 high-priority rock samples",
+    "Perform detailed PIXL and SHERLOC analysis",
+    "Cache samples for Mars Sample Return mission",
+    "Document sample sites with Mastcam-Z stereo imagery"
+  ],
+  "constraints": {
+    "time_budget_min": 2400,
+    "power_budget_wh": 6000,
+    "data_budget_mb": 1200,
+    "max_drive_m": 500,
+    "comm_windows": [
+      {"start_min": 400, "end_min": 430},
+      {"start_min": 880, "end_min": 910},
+      {"start_min": 1360, "end_min": 1390},
+      {"start_min": 1840, "end_min": 1870},
+      {"start_min": 2320, "end_min": 2350}
+    ]
+  },
+  "rover_state": {
+    "location": {
+      "lat": 18.4380,
+      "lon": 77.4250
+    },
+    "sol": 1400,
+    "battery_soc": 0.90,
+    "samples_collected": 15,
+    "samples_available": 28
+  }
+}
